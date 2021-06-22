@@ -1,0 +1,428 @@
+Create feature store
+====================
+
+This tutorial walks you through creating a feature store in a module for an Angular application.
+This tutorial is based on the following `tutorial <https://ngrx.io/guide/store>`_
+
+**Note:** Code scaffolding is done via :ref:`Angular CLI <Label_Programming_Language_Javascript_Angular_ngcli>` and :ref:`NgRx Schematics <Label_Programming_Language_Javascript_Angular_ngrx_schematics>` to avoid writing common boilerplate.
+
+Init app
+--------
+
+- Create new app
+
+.. code-block:: console
+
+  $ npx ng new \
+      --routing \
+      --style scss angular-ngrx-feature-state
+
+- Install :ref:`NgRx Schematics <Label_Programming_Language_Javascript_Angular_ngrx_schematics>` for :ref:`Angular CLI <Label_Programming_Language_Javascript_Angular_ngcli>`
+
+.. code-block:: console
+
+  $ ng add @ngrx/schematics
+  
+  ? Would you like to proceed? Yes
+  ? Do you want to use @ngrx/schematics as the default collection? no
+
+- Install NgRx dependencies
+
+.. code-block:: console
+
+  $ npm install -S @ngrx/{store,effects,entity,store-devtools}
+
+  
+Root Store
+----------
+
+*note: a revoir : --minimal*
+
+Generate the initial root state management files and register it within the ``app.module.ts``:
+
+.. code-block:: console
+
+  $ ng generate @ngrx/schematics:store RootState \
+      --root \
+      --module app.module.ts
+
+      
+This command did the following:
+
+- Create reducers map file
+
+.. code-block:: typescript
+  :caption: src/app/reducers/index.ts
+  
+  import {
+    ActionReducer,
+    ActionReducerMap,
+    createFeatureSelector,
+    createSelector,
+    MetaReducer
+  } from '@ngrx/store';
+  import { environment } from '../../environments/environment';
+  
+  export interface State {
+  
+  }
+  
+  export const reducers: ActionReducerMap<State> = {
+  
+  };
+  
+  export const metaReducers: MetaReducer<State>[] = !environment.production ? [] : [];
+
+  
+- Import store in ``app`` module
+
+.. code-block:: typescript
+  :caption: src/app/app.module.ts
+  :linenos:
+  :emphasize-lines: 1-3, 12-13
+
+  import { StoreModule } from '@ngrx/store';
+  import { reducers, metaReducers } from './reducers';
+  import { StoreDevtoolsModule } from '@ngrx/store-devtools';
+
+  @NgModule({
+    declarations: [
+      AppComponent
+    ],
+    imports: [
+      BrowserModule,
+      AppRoutingModule,
+      StoreModule.forRoot(reducers, { metaReducers }),
+      !environment.production ? StoreDevtoolsModule.instrument() : [],
+    ],
+    providers: [],
+    bootstrap: [AppComponent]
+  })
+  export class AppModule { }
+
+
+Module
+------
+
+- Create counter module
+
+.. code-block:: console
+
+  $ ng generate module \
+      --flat false \
+      --module app.module.ts \
+      feature/counter
+      
+This command did the following:
+
+- Create module
+
+.. code-block:: typescript
+  :caption: src/app/feature/counter/counter.module.ts
+
+  import { NgModule } from '@angular/core';
+  import { CommonModule } from '@angular/common';
+  
+  @NgModule({
+    declarations: [],
+    imports: [
+      CommonModule
+    ]
+  })
+  export class CounterModule { }
+  
+- Import this module in ``AppModule``
+
+.. code-block:: typescript
+  :caption: src/app/app.module.ts
+  :linenos:
+  :emphasize-lines: 1, 7 
+  
+  import { CounterModule } from './feature/counter/counter.module';
+  
+  @NgModule({
+    // ...
+    imports: [
+      // ...
+      CounterModule
+    ],
+    // ...
+  })
+  export class AppModule { }
+
+Feature Store
+-------------
+
+- Generate an ``counter`` feature state and register it with the ``counter.module.ts``
+
+.. code-block:: console
+
+  $ ng generate @ngrx/schematics:store \
+      --module counter.module.ts \
+      feature/counter/counter
+
+This command did the following:
+
+- Create reducers map file
+
+.. code-block:: typescript
+  :caption:  src/app/feature/counter/reducers/index.ts
+      
+  import {
+  ActionReducer,
+    ActionReducerMap,
+    createFeatureSelector,
+    createSelector,
+    MetaReducer
+  } from '@ngrx/store';
+  import { environment } from '../../../../environments/environment';
+  
+  export const counterFeatureKey = 'counter';
+  
+  export interface State {
+  
+  }
+  
+  export const reducers: ActionReducerMap<State> = {
+  
+  };
+  
+  export const metaReducers: MetaReducer<State>[] = !environment.production ? [] : [];    
+        
+- Import store in ``counter`` module
+
+.. code-block:: typescript
+  :caption: src/app/feature/counter/counter.module.ts
+  
+  import { NgModule } from '@angular/core';
+  import { CommonModule } from '@angular/common';
+  import { StoreModule } from '@ngrx/store';
+  import * as fromCounter from './reducers';
+
+  @NgModule({
+    declarations: [],
+    imports: [
+      CommonModule,
+      StoreModule.forFeature(fromCounter.counterFeatureKey, fromCounter.reducers, { metaReducers: fromCounter.metaReducers })
+    ]
+  })
+  export class CounterModule { }
+      
+Actions
+-------
+
+Generate the actions file:
+
+.. code-block:: console
+
+  $ ng generate @ngrx/schematics:action \
+      --group --defaults --creators \
+      --prefix counter \
+      feature/counter/counter
+      
+      
+This command create the actions file and replace contents by the following:
+
+.. code-block:: typescript
+  :caption: src/app/feature/counter/actions/counter.actions.ts
+  :linenos:
+  :emphasize-lines: 3-5
+  
+  import { createAction } from '@ngrx/store';
+
+  export const counterIncrement = createAction('[Counter Component] Increment');
+  export const counterDecrement = createAction('[Counter Component] Decrement');
+  export const counterReset = createAction('[Counter Component] Reset');
+  
+
+Reducer
+-------
+
+Generate a ``Counter`` reducer file and then, add it to a defined map of reducers
+
+.. code-block:: console
+
+  $ ng generate @ngrx/schematics:reducer \
+      --group --defaults \
+      --reducers reducers/index.ts \
+      feature/counter/counter
+      
+This command did the following:
+
+- Create reducer in which to add the following highlight lines:
+
+.. code-block:: typescript
+  :caption: src/app/feature/counter/reducers/counter.reducer.ts
+  :linenos:
+  :emphasize-lines: 2, 6, 10-12
+  
+  import { createReducer, on } from '@ngrx/store';
+  import { counterIncrement, counterDecrement, counterReset } from '../actions/counter.actions';
+
+  export const counterFeatureKey = 'counter';
+
+  export const initialState = 0;
+
+  export const reducer = createReducer(
+    initialState,
+    on(counterIncrement, (state) => state + 1),
+    on(counterDecrement, (state) => state - 1),
+    on(counterReset, (state) => 0)
+  );
+  
+- Add reducer in index
+
+.. code-block:: typescript
+  :caption: src/app/feature/counter/reducers/index.ts
+  :linenos:
+  :emphasize-lines: 9, 11, 16
+  
+  import {
+    ActionReducer,
+    ActionReducerMap,
+    createFeatureSelector,
+    createSelector,
+    MetaReducer
+  } from '@ngrx/store';
+  import { environment } from '../../../../environments/environment';
+  import * as fromCounter from './counter.reducer';
+
+  export interface State {
+    //[fromCounter.counterFeatureKey]: fromCounter.State;
+  }
+  
+  export const reducers: ActionReducerMap<State> = {
+    [fromCounter.counterFeatureKey]: fromCounter.reducer,
+  };
+  
+  export const metaReducers: MetaReducer<State>[] = !environment.production ? [] : [];
+
+Note: line 11 is commented because reducer state is not an interface but a simple number.
+
+Selector
+--------
+
+
+Generate ``counter`` selector:
+
+.. code-block:: console
+
+  $ ng generate @ngrx/schematics:selector \
+      --group \
+      feature/counter/counter
+  
+This command did the following:
+
+.. code-block:: typescript
+  :caption: src/app/feature/counter/selectors/counter.selectors.ts
+  
+  import { createFeatureSelector, createSelector } from '@ngrx/store';
+  import { counterFeatureKey } from '../reducers/counter.reducer'
+  
+  export const getCounterState = createFeatureSelector<{ counter: number }>(counterFeatureKey);
+  
+  export const getCounter = createSelector(
+      getCounterState,
+      state => state.counter
+  )
+
+Component
+---------
+
+- Generate a ``Counter`` component
+
+.. code-block:: console
+
+  $ ng generate component \
+      --module feature/counter/counter.module.ts \
+      feature/counter/counter 
+  
+- Complete the component class
+
+.. code-block:: typescript
+  :caption: src/app/feature/counter/counter/counter.component.ts
+  :linenos:
+  :emphasize-lines: 2-5, 14,  17, 19, 25-27, 29-31, 33-35
+  
+  import { Component, OnInit } from '@angular/core';
+  import { Observable } from 'rxjs';
+  import { Store } from '@ngrx/store';
+  import { counterIncrement, counterDecrement, counterReset } from '../actions/counter.actions';
+  import { getCounter } from '../selectors/counter.selectors'
+    
+  @Component({
+    selector: 'app-counter',
+    templateUrl: './counter.component.html',
+    styleUrls: ['./counter.component.scss']
+  })
+  export class CounterComponent implements OnInit {
+  
+    count$: Observable<number>
+  
+    constructor(
+      private store$: Store
+    ) {
+      this.count$ = this.store$.select(getCounter);
+    }
+  
+    ngOnInit(): void {
+    }
+  
+    increment() {
+      this.store$.dispatch(counterIncrement());
+    }
+  
+    decrement() {
+      this.store$.dispatch(counterDecrement());
+    }
+  
+    reset() {
+      this.store$.dispatch(counterReset());
+    }
+  
+  }
+  
+- Edit component template
+
+.. code-block:: html
+  :caption: src/app/feature/counter/counter/counter.component.html
+  
+  <button (click)="increment()">Increment</button>
+
+  <div>Current Count: {{ count$ | async }}</div>
+
+  <button (click)="decrement()">Decrement</button>
+
+  <button (click)="reset()">Reset Counter</button>
+  
+- Export component
+
+.. code-block:: html
+  :caption: src/app/feature/counter/counter.module.ts
+  :linenos:
+  :emphasize-lines: 1, 5-7
+  
+  import { CounterComponent } from './counter/counter.component';
+
+  @NgModule({
+    // ...
+    exports: [
+      CounterComponent
+    ]
+  })
+  export class CounterModule { }
+
+- Include counter component in app component
+
+.. code-block:: html
+  :caption: src/app/app.component.html
+  
+  <app-counter></app-counter>
+
+
+Run
+---
+
+.. code-block:: console
+
+  $ ng serve
